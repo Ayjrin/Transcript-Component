@@ -1,0 +1,23 @@
+{
+  "name": "transcript-component",
+  "version": "1.0.0",
+  "description": "",
+  "keywords": [
+    "transcript"
+  ],
+  "homepage": "https://github.com/Ayjrin/Transcript-Component#readme",
+  "bugs": {
+    "url": "https://github.com/Ayjrin/Transcript-Component/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ayjrin/Transcript-Component.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}

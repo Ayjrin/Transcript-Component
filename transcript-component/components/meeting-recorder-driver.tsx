@@ -1,0 +1,222 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import MeetingRecorder from "./meeting-recorder"
+import type { Utterance, Speaker, TagType } from "@/types/meeting"
+
+// Recording states
+type RecorderState = "idle" | "waiting" | "recording" | "completed"
+
+export default function MeetingRecorderDriver() {
+  const [meetingUrl, setMeetingUrl] = useState("")
+  const [state, setState] = useState<RecorderState>("idle")
+  const [transcript, setTranscript] = useState<Utterance[]>([])
+
+  // Handle starting the recording
+  const handleStartRecording = (url: string) => {
+    if (!url.trim()) return
+
+    setMeetingUrl(url)
+    setTranscript([])
+    setState("waiting")
+
+    // After a delay, transition to recording state and start streaming data
+    setTimeout(() => {
+      setState("recording")
+    }, 2000)
+  }
+
+  // Handle ending the recording
+  const handleEndRecording = () => {
+    // When ending recording, show all utterances immediately
+    const allUtterances = generateMockTranscript()
+    setTranscript(allUtterances)
+    setState("completed")
+  }
+
+  // Handle resetting to initial state
+  const handleReset = () => {
+    setState("idle")
+    setTranscript([])
+    setMeetingUrl("")
+  }
+
+  // Handle adding a tag to an utterance
+  const handleAddTag = (utteranceId: string, tagType: TagType) => {
+    setTranscript((prev) =>
+      prev.map((utterance) =>
+        utterance.id === utteranceId
+          ? {
+              ...utterance,
+              tags: [
+                ...utterance.tags.filter((t) => t.type !== tagType),
+                { type: tagType, label: getTagLabel(tagType) },
+              ],
+            }
+          : utterance,
+      ),
+    )
+  }
+
+  // Handle removing a tag from an utterance
+  const handleRemoveTag = (utteranceId: string, tagType: TagType) => {
+    setTranscript((prev) =>
+      prev.map((utterance) =>
+        utterance.id === utteranceId
+          ? {
+              ...utterance,
+              tags: utterance.tags.filter((t) => t.type !== tagType),
+            }
+          : utterance,
+      ),
+    )
+  }
+
+  // Handle linking Q&A utterances
+  const handleLinkQA = (questionId: string, answerIds: string[]) => {
+    setTranscript((prev) => {
+      const newTranscript = [...prev]
+
+      // Update question with links to answers
+      const questionIndex = newTranscript.findIndex((u) => u.id === questionId)
+      if (questionIndex >= 0) {
+        newTranscript[questionIndex] = {
+          ...newTranscript[questionIndex],
+          tags: [
+            ...newTranscript[questionIndex].tags.filter((t) => t.type !== "question"),
+            { type: "question", label: "Question" },
+          ],
+          linkedUtterances: answerIds,
+        }
+      }
+
+      // Add answer tag to all answers
+      return newTranscript.map((utterance) =>
+        answerIds.includes(utterance.id)
+          ? {
+              ...utterance,
+              tags: [...utterance.tags.filter((t) => t.type !== "answer"), { type: "answer", label: "Answer" }],
+              linkedUtterances: [questionId],
+            }
+          : utterance,
+      )
+    })
+  }
+
+  // Simulate streaming data when in recording state
+  useEffect(() => {
+    if (state !== "recording") return
+
+    // Generate mock data
+    const mockData = generateMockTranscript()
+    let currentIndex = 0
+
+    // Add the first utterance immediately
+    if (mockData.length > 0) {
+      setTranscript([mockData[0]])
+      currentIndex = 1
+    }
+
+    // Set up interval to add remaining utterances
+    const intervalId = setInterval(() => {
+      if (currentIndex < mockData.length) {
+        console.log(`Adding utterance ${currentIndex + 1}`)
+        setTranscript((prev) => [...prev, mockData[currentIndex]])
+        currentIndex++
+      } else {
+        // All utterances added, clear the interval
+        clearInterval(intervalId)
+      }
+    }, 2000)
+
+    // Clean up the interval when component unmounts or state changes
+    return () => clearInterval(intervalId)
+  }, [state])
+
+  return (
+    <MeetingRecorder
+      meetingUrl={meetingUrl}
+      state={state}
+      transcript={transcript}
+      onStartRecording={handleStartRecording}
+      onEndRecording={handleEndRecording}
+      onReset={handleReset}
+      onAddTag={handleAddTag}
+      onRemoveTag={handleRemoveTag}
+      onLinkQA={handleLinkQA}
+    />
+  )
+}
+
+// Helper function to get tag label
+function getTagLabel(tagType: TagType): string {
+  const labels: Record<TagType, string> = {
+    question: "Question",
+    answer: "Answer",
+    competitor: "Competitor",
+    tool: "Tool",
+    "pain-point": "Pain Point",
+    "current-process": "Current Process",
+    "ideal-process": "Ideal Process",
+  }
+  return labels[tagType]
+}
+
+// Mock data generation
+function generateMockTranscript(): Utterance[] {
+  const speakers: Speaker[] = [
+    { id: "1", name: "John (Host)" },
+    { id: "2", name: "Sarah (Client)" },
+  ]
+
+  return [
+    {
+      id: "1",
+      speakerId: speakers[0].id,
+      speakerName: speakers[0].name,
+      text: "Thanks for joining today. Could you tell us about your current workflow for managing customer data?",
+      timestamp: "00:00:15",
+      tags: [],
+    },
+    {
+      id: "2",
+      speakerId: speakers[1].id,
+      speakerName: speakers[1].name,
+      text: "Currently we're using Excel spreadsheets and it's becoming a nightmare as we scale. We have data scattered across multiple files and it's hard to keep track of everything.",
+      timestamp: "00:00:30",
+      tags: [],
+    },
+    {
+      id: "3",
+      speakerId: speakers[0].id,
+      speakerName: speakers[0].name,
+      text: "I see. What's the biggest pain point with your current system?",
+      timestamp: "00:01:05",
+      tags: [],
+    },
+    {
+      id: "4",
+      speakerId: speakers[1].id,
+      speakerName: speakers[1].name,
+      text: "Definitely the lack of real-time collaboration. We've tried Google Sheets but it doesn't have the advanced features we need. We looked at Salesforce but it's too expensive for our small team.",
+      timestamp: "00:01:20",
+      tags: [],
+    },
+    {
+      id: "5",
+      speakerId: speakers[0].id,
+      speakerName: speakers[0].name,
+      text: "What would an ideal solution look like for your team?",
+      timestamp: "00:02:00",
+      tags: [],
+    },
+    {
+      id: "6",
+      speakerId: speakers[1].id,
+      speakerName: speakers[1].name,
+      text: "We need something cloud-based with good collaboration features, custom fields for our industry-specific data, and ideally some automation for follow-ups. We're currently using Zapier for some automation but it's not integrated well with our spreadsheets.",
+      timestamp: "00:02:15",
+      tags: [],
+    },
+  ]
+}
