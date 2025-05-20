@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import {
@@ -20,18 +20,23 @@ import type { Utterance, TagType } from "@/types/meeting"
 
 interface TranscriptViewerProps {
   transcript: Utterance[]
-  onAddTag: (utteranceId: string, tagType: TagType) => void
-  onRemoveTag: (utteranceId: string, tagType: TagType) => void
-  onLinkQA: (questionId: string, answerIds: string[]) => void
+  onAddTag: (_utteranceId: string, _tagType: TagType) => void
+  _onRemoveTag: (_utteranceId: string, _tagType: TagType) => void
+  onLinkQA: (_questionId: string, _answerIds: string[]) => void
 }
 
-export default function TranscriptViewer({ transcript, onAddTag, onRemoveTag, onLinkQA }: TranscriptViewerProps) {
+export default function TranscriptViewer({ transcript, onAddTag, _onRemoveTag, onLinkQA }: TranscriptViewerProps) {
   const [hoveredUtteranceId, setHoveredUtteranceId] = useState<string | null>(null)
   const [selectedUtteranceId, setSelectedUtteranceId] = useState<string | null>(null)
   const [selectedTagType, setSelectedTagType] = useState<TagType | null>(null)
   const [qaLinkMode, setQaLinkMode] = useState<boolean>(false)
   const [qaSource, setQaSource] = useState<string | null>(null)
   const [qaTargets, setQaTargets] = useState<Set<string>>(new Set())
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true)
+  
+  const transcriptContainerRef = useRef<HTMLDivElement>(null)
+  const lastScrollHeightRef = useRef<number>(0)
+  const lastScrollTopRef = useRef<number>(0)
 
   const tagConfig: Record<TagType, { color: string; icon: React.ReactNode; label: string }> = {
     question: {
@@ -119,7 +124,7 @@ export default function TranscriptViewer({ transcript, onAddTag, onRemoveTag, on
 
   const renderTagButtons = (utteranceId: string) => {
     return (
-      <div className="absolute -top-10 left-0 bg-white dark:bg-gray-800 shadow-md rounded-md p-1 flex items-center space-x-1 z-10 border">
+      <div className="absolute -top-10 left-2 bg-white dark:bg-gray-800 shadow-md rounded-md p-1 flex items-center space-x-1 z-10 border transform transition-transform duration-200 ease-in-out hover:scale-105">
         <Button
           size="sm"
           variant="ghost"
@@ -139,15 +144,17 @@ export default function TranscriptViewer({ transcript, onAddTag, onRemoveTag, on
               key={type}
               size="sm"
               variant="ghost"
-              className="h-8 w-8 p-0"
-              onClick={() => {
-                onAddTag(utteranceId, type as TagType)
-                // Keep the utterance selected after tagging
-                setSelectedUtteranceId(utteranceId)
-              }}
+              className={cn(
+                "h-8 px-2 text-xs font-medium transition-colors duration-200",
+                selectedTagType === type ? `${config.color} text-white` : "",
+              )}
+              onClick={() => setSelectedTagType(type as TagType)}
               title={config.label}
             >
-              <div className={cn("h-3 w-3 rounded-full", config.color)} />
+              <div className={cn(
+                "h-3 w-3 rounded-full",
+                selectedTagType === type ? "bg-white" : config.color
+              )} />
             </Button>
           ))}
       </div>
@@ -184,35 +191,66 @@ export default function TranscriptViewer({ transcript, onAddTag, onRemoveTag, on
   // Handle clicks outside utterances to clear selection
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (selectedUtteranceId && !qaLinkMode && !selectedTagType) {
+      if (selectedUtteranceId) {
         const target = event.target as HTMLElement
         if (!target.closest(`[data-utterance-id="${selectedUtteranceId}"]`)) {
           setSelectedUtteranceId(null)
+          setSelectedTagType(null)
         }
       }
     }
 
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside)
-    }
-  }, [selectedUtteranceId, qaLinkMode, selectedTagType])
+    document.addEventListener("click", handleClickOutside)
+    return () => document.removeEventListener("click", handleClickOutside)
+  }, [selectedUtteranceId])
 
-  // Auto-scroll to the bottom when new utterances are added
+  // Handle scroll detection
   useEffect(() => {
-    if (transcript.length > 0) {
-      const container = document.querySelector(".transcript-container")
-      if (container) {
-        container.scrollTop = container.scrollHeight
+    const container = transcriptContainerRef.current
+    if (!container) return
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container
+      const isAtBottom = Math.abs((scrollTop + clientHeight) - scrollHeight) < 10
+      
+      // Only update auto-scroll if there's been significant scroll movement
+      if (Math.abs(scrollTop - lastScrollTopRef.current) > 10) {
+        setShouldAutoScroll(isAtBottom)
       }
+      
+      lastScrollTopRef.current = scrollTop
     }
-  }, [transcript.length])
+
+    container.addEventListener('scroll', handleScroll)
+    return () => container.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    const container = transcriptContainerRef.current
+    if (!container || !shouldAutoScroll) return
+
+    const scrollToBottom = () => {
+      container.scrollTop = container.scrollHeight
+    }
+
+    // If the height has changed, we have new content
+    if (container.scrollHeight !== lastScrollHeightRef.current) {
+      scrollToBottom()
+      lastScrollHeightRef.current = container.scrollHeight
+    }
+  }, [transcript, shouldAutoScroll, qaLinkMode, selectedTagType])
 
   return (
-    <div className="space-y-4">
-      {renderQALinkingControls()}
+    <div className="space-y-4 relative overflow-hidden rounded-lg">
+      {/* Q&A Linking Controls */}
+      {qaLinkMode && renderQALinkingControls()}
 
-      <div className="space-y-6 transcript-container">
+      {/* Transcript */}
+      <div 
+        ref={transcriptContainerRef}
+        className="space-y-4 max-h-[60vh] overflow-y-auto scroll-smooth pt-12 px-2"
+      >
         {transcript.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">Waiting for transcript...</div>
         ) : (
@@ -225,10 +263,10 @@ export default function TranscriptViewer({ transcript, onAddTag, onRemoveTag, on
 
             return (
               <div
-                key={utterance.id}
+                key={`${utterance.id}-${utterance.timestamp}`}
                 data-utterance-id={utterance.id}
                 className={cn(
-                  "relative p-4 rounded-lg transition-colors",
+                  "relative p-4 rounded-lg transition-all duration-200",
                   isSource ? "bg-blue-50 dark:bg-blue-950 border-2 border-blue-500" : "",
                   isTarget ? "bg-green-50 dark:bg-green-950 border-2 border-green-500" : "",
                   !isSource && !isTarget && isQuestion ? "bg-blue-50 dark:bg-blue-950" : "",
@@ -236,6 +274,8 @@ export default function TranscriptViewer({ transcript, onAddTag, onRemoveTag, on
                   qaLinkMode && !isSource && !isTarget ? "cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800" : "",
                   selectedTagType ? "cursor-pointer" : "",
                   selectedUtteranceId === utterance.id ? "ring-2 ring-primary ring-opacity-50" : "",
+                  hoveredUtteranceId === utterance.id ? "shadow-lg ring-1 ring-gray-200 dark:ring-gray-700" : "",
+                  "hover:shadow-lg hover:ring-1 hover:ring-gray-200 dark:hover:ring-gray-700"
                 )}
                 onMouseEnter={() => setHoveredUtteranceId(utterance.id)}
                 onMouseLeave={() => setHoveredUtteranceId(null)}
@@ -263,8 +303,8 @@ export default function TranscriptViewer({ transcript, onAddTag, onRemoveTag, on
                       <span
                         key={index}
                         className={cn(
-                          "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium",
-                          tagConfig[tag.type].color.replace("bg-", "bg-opacity-20 text-"),
+                          "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium text-white",
+                          tagConfig[tag.type].color,
                         )}
                       >
                         {tagConfig[tag.type].icon}

@@ -18,12 +18,12 @@ interface MeetingRecorderProps {
   meetingUrl: string
   state: RecorderState
   transcript: Utterance[]
-  onStartRecording: (url: string) => void
+  onStartRecording: (_url: string) => void
   onEndRecording: () => void
   onReset: () => void
-  onAddTag: (utteranceId: string, tagType: TagType) => void
-  onRemoveTag: (utteranceId: string, tagType: TagType) => void
-  onLinkQA: (questionId: string, answerIds: string[]) => void
+  onAddTag: (_utteranceId: string, _tagType: TagType) => void
+  onRemoveTag: (_utteranceId: string, _tagType: TagType) => void
+  onLinkQA: (_questionId: string, _answerIds: string[]) => void
 }
 
 export default function MeetingRecorder({
@@ -74,7 +74,7 @@ export default function MeetingRecorder({
 
       case "waiting":
       case "recording":
-      case "completed":
+      case "completed": {
         const isActive = state === "waiting" || state === "recording"
         return (
           <div className="space-y-6">
@@ -104,11 +104,12 @@ export default function MeetingRecorder({
             <TranscriptViewer
               transcript={transcript}
               onAddTag={onAddTag}
-              onRemoveTag={onRemoveTag}
+              _onRemoveTag={onRemoveTag}
               onLinkQA={onLinkQA}
             />
           </div>
         )
+      }
     }
   }
 

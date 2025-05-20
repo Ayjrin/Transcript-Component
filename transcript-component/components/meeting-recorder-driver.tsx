@@ -28,9 +28,14 @@ export default function MeetingRecorderDriver() {
 
   // Handle ending the recording
   const handleEndRecording = () => {
-    // When ending recording, show all utterances immediately
-    const allUtterances = generateMockTranscript()
-    setTranscript(allUtterances)
+    // When ending recording, show all remaining utterances immediately
+    if (mockData.length > 0) {
+      setTranscript(prev => {
+        // Add all remaining messages that haven't been shown yet
+        const remaining = mockData.slice(currentIndex)
+        return [...prev, ...remaining]
+      })
+    }
     setState("completed")
   }
 
@@ -39,6 +44,8 @@ export default function MeetingRecorderDriver() {
     setState("idle")
     setTranscript([])
     setMeetingUrl("")
+    setCurrentIndex(0)
+    setMockData([])
   }
 
   // Handle adding a tag to an utterance
@@ -103,35 +110,60 @@ export default function MeetingRecorderDriver() {
     })
   }
 
+  // Keep track of current transcript index
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const [mockData, setMockData] = useState<Utterance[]>([])
+
+  // Debug logs
+  useEffect(() => {
+    console.warn('Transcript updated:', transcript.map(t => ({ id: t.id, text: t.text.substring(0, 20) })))
+  }, [transcript])
+
+  useEffect(() => {
+    console.warn('Current index updated:', currentIndex)
+  }, [currentIndex])
+
+  useEffect(() => {
+    console.warn('Mock data updated:', mockData.map(t => t.id))
+  }, [mockData])
+
+  // Initialize mock data when recording starts
+  useEffect(() => {
+    if (state === "recording") {
+      const data = generateMockTranscript()
+      const uniqueData = data.filter((item, index, self) => 
+        index === self.findIndex((t) => t.id === item.id && t.timestamp === item.timestamp)
+      )
+      setMockData(uniqueData)
+      if (uniqueData.length > 0) {
+        setTranscript([uniqueData[0]])
+        setCurrentIndex(1)
+      }
+    }
+  }, [state])
+
   // Simulate streaming data when in recording state
   useEffect(() => {
-    if (state !== "recording") return
+    if (state !== "recording" || currentIndex >= mockData.length) return
 
-    // Generate mock data
-    const mockData = generateMockTranscript()
-    let currentIndex = 0
-
-    // Add the first utterance immediately
-    if (mockData.length > 0) {
-      setTranscript([mockData[0]])
-      currentIndex = 1
-    }
-
-    // Set up interval to add remaining utterances
     const intervalId = setInterval(() => {
-      if (currentIndex < mockData.length) {
-        console.log(`Adding utterance ${currentIndex + 1}`)
-        setTranscript((prev) => [...prev, mockData[currentIndex]])
-        currentIndex++
-      } else {
-        // All utterances added, clear the interval
-        clearInterval(intervalId)
-      }
+      setCurrentIndex(prevIndex => {
+        if (prevIndex < mockData.length) {
+          console.warn(`Adding utterance ${prevIndex + 1}`)
+          setTranscript(prev => {
+            const newUtterance = mockData[prevIndex]
+            // Check if this utterance is already in the transcript
+            const exists = prev.some(u => u.id === newUtterance.id && u.timestamp === newUtterance.timestamp)
+            return exists ? prev : [...prev, newUtterance]
+          })
+          return prevIndex + 1
+        }
+        return prevIndex
+      })
     }, 2000)
 
-    // Clean up the interval when component unmounts or state changes
     return () => clearInterval(intervalId)
-  }, [state])
+  }, [state, mockData, currentIndex])
 
   return (
     <MeetingRecorder
