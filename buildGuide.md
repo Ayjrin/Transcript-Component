@@ -1,7 +1,7 @@
 # Transcript Component Build Guide
 
 ## Overview
-This guide details the implementation of a Next.js component for recording, transcribing, and tagging meeting conversations. The component features a dynamic UI that transitions through different states and provides an interactive tagging system.
+The Transcript Component is a real-time meeting analysis tool that integrates with Recall AI and Assembly AI for live transcription of video calls. It provides a seamless interface for capturing, categorizing, and analyzing meeting content through an intelligent tagging system. Users can input a meeting URL to begin recording, after which the component displays a diarized transcript that automatically updates as people speak. The interface enables real-time categorization of utterances through a sophisticated tagging system, allowing users to mark important moments such as competitor mentions, tool discussions, pain points, and process descriptions. A specialized Q&A linking feature helps connect questions with their corresponding answers, creating a structured knowledge base from the conversation. The component interfaces with a comprehensive API backend that manages client data, call histories, and utterances, making it a powerful tool for meeting documentation, analysis, and knowledge extraction.
 
 ## Core Components
 
