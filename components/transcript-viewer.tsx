@@ -20,12 +20,12 @@ import type { Utterance, TagType } from "@/types/meeting"
 
 interface TranscriptViewerProps {
   transcript: Utterance[]
-  onAddTag: (_utteranceId: string, _tagType: TagType) => void
-  _onRemoveTag: (_utteranceId: string, _tagType: TagType) => void
-  onLinkQA: (_questionId: string, _answerIds: string[]) => void
+  onAddTagAction: (utteranceId: string, tagType: TagType) => void
+  _onRemoveTagAction: (utteranceId: string, tagType: TagType) => void
+  onLinkQAAction: (sourceId: string, targetIds: string[]) => void
 }
 
-export default function TranscriptViewer({ transcript, onAddTag, _onRemoveTag, onLinkQA }: TranscriptViewerProps) {
+export default function TranscriptViewer({ transcript, onAddTagAction, _onRemoveTagAction, onLinkQAAction }: TranscriptViewerProps) {
   const [hoveredUtteranceId, setHoveredUtteranceId] = useState<string | null>(null)
   const [selectedUtteranceId, setSelectedUtteranceId] = useState<string | null>(null)
   const [selectedTagType, setSelectedTagType] = useState<TagType | null>(null)
@@ -89,7 +89,7 @@ export default function TranscriptViewer({ transcript, onAddTag, _onRemoveTag, o
       }
       setQaTargets(newTargets)
     } else if (selectedTagType) {
-      onAddTag(utteranceId, selectedTagType)
+      onAddTagAction(hoveredUtteranceId!, selectedTagType)
       setSelectedTagType(null)
     } else {
       // Toggle selection of the utterance for tagging
@@ -103,14 +103,14 @@ export default function TranscriptViewer({ transcript, onAddTag, _onRemoveTag, o
     setQaTargets(new Set())
 
     // Add question tag to source
-    onAddTag(utteranceId, "question")
+    onAddTagAction(utteranceId, "question")
   }
 
   const confirmQALink = () => {
     if (!qaSource || qaTargets.size === 0) return
 
     // Link the question to the answers
-    onLinkQA(qaSource, Array.from(qaTargets))
+    onLinkQAAction(qaSource, Array.from(qaTargets))
 
     // Reset QA linking mode
     cancelQALink()
@@ -148,7 +148,11 @@ export default function TranscriptViewer({ transcript, onAddTag, _onRemoveTag, o
                 "h-8 px-2 text-xs font-medium transition-colors duration-200",
                 selectedTagType === type ? `${config.color} text-white` : "",
               )}
-              onClick={() => setSelectedTagType(type as TagType)}
+              onClick={() => {
+                if (hoveredUtteranceId) {
+                  onAddTagAction(hoveredUtteranceId, type as TagType)
+                }
+              }}
               title={config.label}
             >
               <div className={cn(
@@ -279,7 +283,6 @@ export default function TranscriptViewer({ transcript, onAddTag, _onRemoveTag, o
                 )}
                 onMouseEnter={() => setHoveredUtteranceId(utterance.id)}
                 onMouseLeave={() => setHoveredUtteranceId(null)}
-                onClick={() => handleUtteranceClick(utterance.id)}
               >
                 {/* Tagging UI */}
                 {(hoveredUtteranceId === utterance.id || selectedUtteranceId === utterance.id) &&

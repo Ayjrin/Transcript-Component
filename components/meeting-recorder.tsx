@@ -18,24 +18,24 @@ interface MeetingRecorderProps {
   meetingUrl: string
   state: RecorderState
   transcript: Utterance[]
-  onStartRecording: (_url: string) => void
-  onEndRecording: () => void
-  onReset: () => void
-  onAddTag: (_utteranceId: string, _tagType: TagType) => void
-  onRemoveTag: (_utteranceId: string, _tagType: TagType) => void
-  onLinkQA: (_questionId: string, _answerIds: string[]) => void
+  onStartRecordingAction: (_url: string) => void
+  onEndRecordingAction: () => void
+  onResetAction: () => void
+  onAddTagAction: (_utteranceId: string, _tagType: TagType) => void
+  onRemoveTagAction: (_utteranceId: string, _tagType: TagType) => void
+  onLinkQAAction: (_questionId: string, _answerIds: string[]) => void
 }
 
 export default function MeetingRecorder({
   meetingUrl,
   state,
   transcript,
-  onStartRecording,
-  onEndRecording,
-  onReset,
-  onAddTag,
-  onRemoveTag,
-  onLinkQA,
+  onStartRecordingAction,
+  onEndRecordingAction,
+  onResetAction,
+  onAddTagAction,
+  onRemoveTagAction,
+  onLinkQAAction,
 }: MeetingRecorderProps) {
   // Local state for the URL input
   const [inputUrl, setInputUrl] = useState(meetingUrl)
@@ -43,7 +43,7 @@ export default function MeetingRecorder({
   // Handle form submission
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    onStartRecording(inputUrl)
+    onStartRecordingAction(inputUrl)
   }
 
   // Render the appropriate content based on the current state
@@ -86,7 +86,7 @@ export default function MeetingRecorder({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={isActive ? onEndRecording : onReset}
+                onClick={isActive ? onEndRecordingAction : onResetAction}
                 className="flex items-center"
               >
                 {isActive && (
@@ -103,9 +103,9 @@ export default function MeetingRecorder({
 
             <TranscriptViewer
               transcript={transcript}
-              onAddTag={onAddTag}
-              _onRemoveTag={onRemoveTag}
-              onLinkQA={onLinkQA}
+              onAddTagAction={onAddTagAction}
+              _onRemoveTagAction={onRemoveTagAction}
+              onLinkQAAction={onLinkQAAction}
             />
           </div>
         )

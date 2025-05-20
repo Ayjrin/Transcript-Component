@@ -13,7 +13,7 @@ export default function MeetingRecorderDriver() {
   const [transcript, setTranscript] = useState<Utterance[]>([])
 
   // Handle starting the recording
-  const handleStartRecording = (url: string) => {
+  const handleStartRecordingAction = (url: string) => {
     if (!url.trim()) return
 
     setMeetingUrl(url)
@@ -27,7 +27,7 @@ export default function MeetingRecorderDriver() {
   }
 
   // Handle ending the recording
-  const handleEndRecording = () => {
+  const handleEndRecordingAction = () => {
     // When ending recording, show all remaining utterances immediately
     if (mockData.length > 0) {
       setTranscript(prev => {
@@ -40,7 +40,7 @@ export default function MeetingRecorderDriver() {
   }
 
   // Handle resetting to initial state
-  const handleReset = () => {
+  const handleResetAction = () => {
     setState("idle")
     setTranscript([])
     setMeetingUrl("")
@@ -49,7 +49,7 @@ export default function MeetingRecorderDriver() {
   }
 
   // Handle adding a tag to an utterance
-  const handleAddTag = (utteranceId: string, tagType: TagType) => {
+  const handleAddTagAction = (utteranceId: string, tagType: TagType) => {
     setTranscript((prev) =>
       prev.map((utterance) =>
         utterance.id === utteranceId
@@ -66,7 +66,7 @@ export default function MeetingRecorderDriver() {
   }
 
   // Handle removing a tag from an utterance
-  const handleRemoveTag = (utteranceId: string, tagType: TagType) => {
+  const handleRemoveTagAction = (utteranceId: string, tagType: TagType) => {
     setTranscript((prev) =>
       prev.map((utterance) =>
         utterance.id === utteranceId
@@ -80,7 +80,7 @@ export default function MeetingRecorderDriver() {
   }
 
   // Handle linking Q&A utterances
-  const handleLinkQA = (questionId: string, answerIds: string[]) => {
+  const handleLinkQAAction = (questionId: string, answerIds: string[]) => {
     setTranscript((prev) => {
       const newTranscript = [...prev]
 
@@ -170,12 +170,12 @@ export default function MeetingRecorderDriver() {
       meetingUrl={meetingUrl}
       state={state}
       transcript={transcript}
-      onStartRecording={handleStartRecording}
-      onEndRecording={handleEndRecording}
-      onReset={handleReset}
-      onAddTag={handleAddTag}
-      onRemoveTag={handleRemoveTag}
-      onLinkQA={handleLinkQA}
+      onStartRecordingAction={handleStartRecordingAction}
+      onEndRecordingAction={handleEndRecordingAction}
+      onResetAction={handleResetAction}
+      onAddTagAction={handleAddTagAction}
+      onRemoveTagAction={handleRemoveTagAction}
+      onLinkQAAction={handleLinkQAAction}
     />
   )
 }
